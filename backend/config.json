@@ -1,1 +1,7 @@
-[]
+[
+  {
+    "key": "welcome_message",
+    "value": "Hey there!",
+    "description": "Shown on home screen"
+  }
+]

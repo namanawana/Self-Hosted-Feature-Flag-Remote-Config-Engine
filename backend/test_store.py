@@ -1,5 +1,5 @@
 from models import FeatureFlag
-from store import FlagStore
+from backend.FlagStore import FlagStore
 
 store = FlagStore()
 store.load_flags()
@@ -9,5 +9,4 @@ store.add_flag(FeatureFlag(name="dark_mode", enabled=False, rule_type="beta_only
 
 # Toggle it
 store.toggle_flag("dark_mode")
-
 print(store.flags)

@@ -32,3 +32,9 @@ class FlagStore:
         self.flags[name].enabled= not self.flags[name].enabled   
         self.save_flags()
         return self.flags[name]
+    def delete_flag(self, name:str):
+        if name not in self.flags:
+            return None
+        del self.flags[name]
+        self.save_flags()
+        return True
