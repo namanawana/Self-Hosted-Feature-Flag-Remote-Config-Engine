@@ -36,5 +36,3 @@ class ConfigStore :
         self.save_configs()
         return deleted
     
-
-        
