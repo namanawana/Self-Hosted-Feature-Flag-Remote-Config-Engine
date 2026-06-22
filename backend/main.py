@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from models import FeatureFlag,ConfigVar
+from models import FeatureFlag, ConfigVar, ConfigUpdate
 from FlagStore import FlagStore
 from ConfigStore import ConfigStore
 
@@ -51,7 +51,7 @@ def delete_flag(name:str):
 
 @app.get("/config")
 def get_configs():
-    return list(config_store.config.values())
+    return list(config_store.configs.values())
 
 @app.post("/config")
 def create_config(config: ConfigVar):
@@ -60,21 +60,21 @@ def create_config(config: ConfigVar):
     
     config_store.add_config(config)
     return config
-@app.patch("config/{key}")
-def update_config(key: str, new_value: str):
+@app.patch("/config/{key}")
+def update_config(key: str, body: ConfigUpdate):
     if key not in config_store.configs:
         raise HTTPException(status_code=404, detail="Config not found")
 
-    updated_config = config_store.update_config(key, new_value)
+    updated_config = config_store.update_config(key, body.value)
     return updated_config
 
-@app.delete("config/{key}")
+@app.delete("/config/{key}")
 def delete_config(key: str):
     if key not in config_store.configs:
         raise HTTPException(status_code=404, detail="Config not found")
     
     deleted = config_store.delete_config(key)
     return{
-        "message":f"Config 'key' deleted",
+        "message":f"Config '{key}' deleted",
         "config": deleted
            }

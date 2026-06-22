@@ -11,4 +11,7 @@ class ConfigVar(BaseModel):
     key: str
     value: str
     description: Optional[str]=""
+
+class ConfigUpdate(BaseModel):
+    value: str
  

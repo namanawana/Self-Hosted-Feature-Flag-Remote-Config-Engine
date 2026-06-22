@@ -3,10 +3,5 @@
     "key": "welcome_message",
     "value": "Hey there!",
     "description": "Shown on home screen"
-  },
-  {
-    "key": "Name ",
-    "value": "My name is Alex machelaus",
-    "description": ""
   }
 ]
