@@ -1,0 +1,16 @@
+[
+  {
+    "name": "dsark_mode",
+    "enabled": true,
+    "environment": "Development",
+    "rule_type": "beta_only",
+    "rule_value": null
+  },
+  {
+    "name": "dark_mode",
+    "enabled": false,
+    "environment": "Development",
+    "rule_type": "beta_only",
+    "rule_value": null
+  }
+]
