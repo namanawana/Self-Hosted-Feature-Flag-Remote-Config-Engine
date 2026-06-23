@@ -1,4 +1,6 @@
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
+import 'dart:convert';
 
 void main() {
   runApp(const MyApp());
@@ -85,5 +87,17 @@ class _FlagListScreenState extends State<FlagListScreen> {
         },
       ),
     );
+  }
+
+  Future<List<dynamic>> fetchFlags() async {
+    // This uses the 'http' tool you imported!
+    final url = Uri.parse('http://localhost:8000/flags');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load flags');
+    }
   }
 }
