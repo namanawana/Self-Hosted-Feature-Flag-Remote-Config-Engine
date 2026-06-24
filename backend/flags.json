@@ -8,7 +8,7 @@
   },
   {
     "name": "dark_mode",
-    "enabled": false,
+    "enabled": true,
     "environment": "Development",
     "rule_type": "beta_only",
     "rule_value": null
