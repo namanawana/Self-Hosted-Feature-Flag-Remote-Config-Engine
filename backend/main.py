@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException,WebSocket,WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from models import FeatureFlag, ConfigVar, ConfigUpdate
+from models import FeatureFlag, ConfigVar, ConfigUpdate, Evaluate
 from FlagStore import FlagStore
 from ConfigStore import ConfigStore
 
@@ -111,3 +111,30 @@ def delete_config(key: str):
         "message":f"Config '{key}' deleted",
         "config": deleted
            }
+@app.post("/evaluate")
+def evaluate(request: Evaluate):
+    active_flags= flag_store.evaluate_flags(request.user_id)
+    return {
+        "user_id": request.user_id,
+        "active_flags": active_flags
+    }
+@app.get("/health")
+def health():
+    return {
+        "status":"OK",
+        "flags_loaded": len(flag_store.flags),
+        "configs_loaded":len(config_store.configs)
+    }
+@app.get("/flags/stats")
+def flag_stats():
+    flags = list(flag_store.flags.values())
+    enabled = 0
+    for f in flags:
+        if f.enabled:
+            enabled += 1
+    return {
+        "total": len(flags),
+        "enabled": enabled,
+        "disabled": len(flags) - enabled
+    }
+
