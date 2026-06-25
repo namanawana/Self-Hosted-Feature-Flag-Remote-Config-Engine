@@ -46,11 +46,15 @@ def get_flags():
     return list(flag_store.flags.values())
 
 @app.post("/flags")
-def create_flag(flag:FeatureFlag):
+async def create_flag(flag:FeatureFlag):
     if flag.name in flag_store.flags:
         raise HTTPException(status_code=409, detail= "flag already exists")
     
     flag_store.add_flag(flag)
+    await manager.broadcast({
+        "type":"flag_created",
+        "flag":flag.model_dump()
+    })
     return flag 
 
 @app.patch("/flags/{name}/toggle")
@@ -65,10 +69,14 @@ async def toggle_flag(name:str):
     return updated_flag
 
 @app.delete("/flags/{name}")
-def delete_flag(name:str):
+async def delete_flag(name:str):
     if name not in flag_store.flags:
         raise HTTPException(status_code=404, detail="Flag not found")
     deleted_flag = flag_store.delete_flag(name)
+    await manager.broadcast({
+        "type":"flag-deleted",
+        "flag_name": name
+    })
     return{
         "message":f"Flag '{name}' deleted",
         "flag": deleted_flag

@@ -14,4 +14,7 @@ class ConfigVar(BaseModel):
 
 class ConfigUpdate(BaseModel):
     value: str
- 
+
+class Evaluate(BaseModel):
+    user_id : str
+    

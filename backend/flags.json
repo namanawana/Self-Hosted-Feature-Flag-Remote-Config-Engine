@@ -1,14 +1,14 @@
 [
   {
     "name": "dsark_mode",
-    "enabled": true,
+    "enabled": false,
     "environment": "Development",
     "rule_type": "beta_only",
     "rule_value": null
   },
   {
     "name": "dark_mode",
-    "enabled": true,
+    "enabled": false,
     "environment": "Development",
     "rule_type": "beta_only",
     "rule_value": null
