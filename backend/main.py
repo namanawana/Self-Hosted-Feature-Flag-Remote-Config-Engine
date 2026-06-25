@@ -1,11 +1,21 @@
-from fastapi import FastAPI, HTTPException,WebSocket,WebSocketDisconnect
+from fastapi import FastAPI, HTTPException,WebSocket,WebSocketDisconnect, Depends,Header
 from fastapi.middleware.cors import CORSMiddleware
 from models import FeatureFlag, ConfigVar, ConfigUpdate, Evaluate
 from FlagStore import FlagStore
 from ConfigStore import ConfigStore
+from dotenv import load_dotenv
+import os
 
 app = FastAPI()
+load_dotenv()
+API_KEY = os.getenv("API_KEY")
 
+async def verify_api_key(x_api_key: str = Header(...)):
+    if x_api_key!=API_KEY:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid API key"
+        )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -45,7 +55,7 @@ async def websocket_endpoint(websocket: WebSocket):
 def get_flags():
     return list(flag_store.flags.values())
 
-@app.post("/flags")
+@app.post("/flags", dependencies=[Depends(verify_api_key)])
 async def create_flag(flag:FeatureFlag):
     if flag.name in flag_store.flags:
         raise HTTPException(status_code=409, detail= "flag already exists")
@@ -57,7 +67,7 @@ async def create_flag(flag:FeatureFlag):
     })
     return flag 
 
-@app.patch("/flags/{name}/toggle")
+@app.patch("/flags/{name}/toggle", dependencies=[Depends(verify_api_key)])
 async def toggle_flag(name:str):
     if name not in flag_store.flags:
         raise HTTPException(status_code=404, detail="Flag not found")
@@ -68,7 +78,7 @@ async def toggle_flag(name:str):
     })
     return updated_flag
 
-@app.delete("/flags/{name}")
+@app.delete("/flags/{name}", dependencies=[Depends(verify_api_key)])
 async def delete_flag(name:str):
     if name not in flag_store.flags:
         raise HTTPException(status_code=404, detail="Flag not found")
@@ -86,14 +96,14 @@ async def delete_flag(name:str):
 def get_configs():
     return list(config_store.configs.values())
 
-@app.post("/config")
+@app.post("/config", dependencies=[Depends(verify_api_key)])
 def create_config(config: ConfigVar):
     if config.key in config_store.configs:
         raise HTTPException(status_code=409 , detail="Config already exists")
     
     config_store.add_config(config)
     return config
-@app.patch("/config/{key}")
+@app.patch("/config/{key}", dependencies=[Depends(verify_api_key)])
 def update_config(key: str, body: ConfigUpdate):
     if key not in config_store.configs:
         raise HTTPException(status_code=404, detail="Config not found")
@@ -101,7 +111,7 @@ def update_config(key: str, body: ConfigUpdate):
     updated_config = config_store.update_config(key, body.value)
     return updated_config
 
-@app.delete("/config/{key}")
+@app.delete("/config/{key}", dependencies=[Depends(verify_api_key)])
 def delete_config(key: str):
     if key not in config_store.configs:
         raise HTTPException(status_code=404, detail="Config not found")

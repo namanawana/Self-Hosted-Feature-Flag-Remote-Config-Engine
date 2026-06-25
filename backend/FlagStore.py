@@ -39,19 +39,22 @@ class FlagStore:
         del self.flags[name]
         self.save_flags()
         return True
-    def evaluate_flags(self, user_id:str ):
-        active_flags=[]
-        for flag in self.flag.values():
+    def evaluate_flags(self, user_id: str):
+        active_flags = []
+        for flag in self.flags.values():
             if not flag.enabled:
                 continue
+
             if flag.rule_type == "everyone":
                 active_flags.append(flag.name)
-            elif flag.rule_type=="beta_only":
-                if isinstance(flag.rule_value,list) and user_id in flag.rule_value:
+            elif flag.rule_type == "beta_only":
+                if isinstance(flag.rule_value, list) and user_id in flag.rule_value:
                     active_flags.append(flag.name)
-            elif flag.rule_type == "percentage" :
-                hash_val = int(hashlib.md5(user_id.encode()).hexdigest(),16)%100
-                if isinstance(flag.rule_value,int) and hash_val < flag.rule_value :
-                    active_flags.append(flag.name)       
+            elif flag.rule_type == "percentage":
+                if isinstance(flag.rule_value, int):
+                    hash_val = int(hashlib.md5(user_id.encode()).hexdigest(), 16) % 100
+                    if hash_val < flag.rule_value:
+                        active_flags.append(flag.name)
+
         return active_flags
                 
