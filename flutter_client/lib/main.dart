@@ -176,6 +176,7 @@ class EvaluateUserScreen extends StatefulWidget {
 class _EvaluateUserScreenState extends State<EvaluateUserScreen> {
   final TextEditingController userIdController = TextEditingController();
   List<dynamic> activeFlags = [];
+  bool isLoading = false;
   Future<void> evaluateUser() async {
     final response = await http.post(
       Uri.parse("$baseUrl/evaluate"),
@@ -189,10 +190,13 @@ class _EvaluateUserScreenState extends State<EvaluateUserScreen> {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-
       setState(() {
         activeFlags = data["active_flags"];
       });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("User evaluated successfully!")),
+      );
     } else {
       throw Exception("Failed to evaluate user");
     }
@@ -217,14 +221,37 @@ class _EvaluateUserScreenState extends State<EvaluateUserScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () async {
-                  await evaluateUser();
-                },
-                child: const Text("Evaluate"),
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        setState(() {
+                          isLoading = true;
+                        });
+                        try {
+                          await evaluateUser();
+                        } catch (e) {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(e.toString())));
+                        } finally {
+                          if (mounted) {
+                            setState(() {
+                              isLoading = false;
+                            });
+                          }
+                        }
+                      },
+                child: isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text("Evaluate"),
               ),
             ),
             const SizedBox(height: 24),
-
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -257,6 +284,7 @@ class _CreateFlagScreenState extends State<CreateFlagScreen> {
   final TextEditingController nameController = TextEditingController();
   String selectedEnvironment = "Development";
   String selectedRule = "everyone";
+  bool isLoading = false;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -323,14 +351,40 @@ class _CreateFlagScreenState extends State<CreateFlagScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () async {
-                  await createFlag();
-
-                  if (!mounted) return;
-
-                  Navigator.pop(context);
-                },
-                child: const Text("Create Flag"),
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        setState(() {
+                          isLoading = true;
+                        });
+                        try {
+                          await createFlag();
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Flag created successfully!"),
+                            ),
+                          );
+                          Navigator.pop(context);
+                        } catch (e) {
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(e.toString())));
+                        } finally {
+                          if (mounted) {
+                            setState(() {
+                              isLoading = false;
+                            });
+                          }
+                        }
+                      },
+                child: isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text("Create Flag"),
               ),
             ),
           ],
