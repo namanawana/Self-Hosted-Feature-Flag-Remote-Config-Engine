@@ -17,10 +17,43 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Feature Flag Project',
-      theme: ThemeData.dark().copyWith(
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF071A1A),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color.fromARGB(255, 6, 104, 104),
+          seedColor: Colors.teal,
           brightness: Brightness.dark,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF0E3B3B),
+          centerTitle: true,
+          elevation: 0,
+          titleTextStyle: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        cardTheme: CardThemeData(
+          color: const Color(0xFF123D3D),
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.teal,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          ),
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color.fromARGB(255, 3, 164, 70),
+          foregroundColor: Colors.white,
         ),
       ),
       home: const HomeScreen(),
@@ -44,15 +77,35 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Feature Flags'),
-            const SizedBox(width: 14),
-            Text(
-              isConnected ? "🟢 Connected" : "🟡 Reconnecting...",
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.3,
+            const Text(
+              "🚩 Feature Flags",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+            ),
+
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+
+              decoration: BoxDecoration(
+                color: isConnected
+                    ? Colors.green.withValues(alpha: 0.18)
+                    : Colors.orange.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.circle,
+                    size: 10,
+                    color: isConnected
+                        ? Colors.greenAccent
+                        : Colors.orangeAccent,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(isConnected ? "Connected" : "Reconnecting"),
+                ],
               ),
             ),
           ],
@@ -265,9 +318,19 @@ class _EvaluateUserScreenState extends State<EvaluateUserScreen> {
                 itemCount: activeFlags.length,
                 itemBuilder: (context, index) {
                   return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 6),
                     child: ListTile(
-                      leading: const Icon(Icons.flag),
-                      title: Text(activeFlags[index]["name"]),
+                      leading: const Icon(
+                        Icons.flag,
+                        color: Colors.greenAccent,
+                      ),
+                      title: Text(
+                        activeFlags[index]["name"],
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
                   );
                 },
@@ -544,32 +607,104 @@ class _FlagListScreenState extends State<FlagListScreen> {
           itemBuilder: (context, index) {
             final flag = flags[index];
 
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: SwitchListTile(
-                  title: Text(
-                    flag["name"],
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                    ),
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: flag["enabled"]
+                      ? Colors.greenAccent
+                      : Colors.transparent,
+                  width: 2,
+                ),
+              ),
+              child: Card(
+                margin: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 10,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 4,
                   ),
-                  subtitle: Text("Environment: ${flag["environment"]}"),
-                  value: flag["enabled"],
-                  onChanged: (bool newValue) async {
-                    try {
-                      await toggleFlag(flag["name"]);
-                      setState(() {});
-                    } catch (e) {
-                      if (!mounted) return;
-
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text(e.toString())));
-                    }
-                  },
+                  child: SwitchListTile(
+                    secondary: Icon(
+                      flag["enabled"] ? Icons.verified : Icons.flag_outlined,
+                      color: flag["enabled"] ? Colors.greenAccent : Colors.grey,
+                      size: 32,
+                    ),
+                    title: Text(
+                      flag["name"],
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 22,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    subtitle: Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        Chip(
+                          avatar: const Icon(
+                            Icons.public,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                          backgroundColor: flag["rule_type"] == "everyone"
+                              ? Colors.green
+                              : flag["rule_type"] == "beta_only"
+                              ? Colors.blue
+                              : Colors.orange,
+                          label: Text(
+                            flag["environment"],
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                        Chip(
+                          avatar: const Icon(
+                            Icons.rule,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                          backgroundColor: Colors.green,
+                          label: Text(
+                            flag["rule_type"] == "everyone"
+                                ? "Everyone"
+                                : flag["rule_type"] == "beta_only"
+                                ? "Beta Users"
+                                : "${flag["rule_value"]}% Rollout",
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                    value: flag["enabled"],
+                    thumbColor: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return Colors.greenAccent;
+                      }
+                      return Colors.grey;
+                    }),
+                    trackColor: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return Colors.teal;
+                      }
+                      return Colors.grey.shade700;
+                    }),
+                    onChanged: (bool newValue) async {
+                      try {
+                        await toggleFlag(flag["name"]);
+                        setState(() {});
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(e.toString())));
+                      }
+                    },
+                  ),
                 ),
               ),
             );
