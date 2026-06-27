@@ -41,9 +41,9 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Row(
           children: [
             const Text('Feature Flags'),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Text(
-              isConnected ? '🟢 Connected' : '🔴 Disconnected',
+              isConnected ? '🟢 Connected!' : '🔴 Disconnected!',
               style: const TextStyle(fontSize: 16),
             ),
           ],
@@ -54,12 +54,18 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: selectedIndex,
         onTap: (int index) {
           setState(() {
-            selectedIndex = index; // Updates the view when tapped
+            selectedIndex = index;
           });
         },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.flag), label: 'Flags'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Config'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.flag),
+            label: 'Feature Flags',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Configuration Settings',
+          ),
         ],
       ),
     );
@@ -68,25 +74,41 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    channel = WebSocketChannel.connect(
-      Uri.parse('ws://landing-traffic-sixteen.ngrok-free.dev/ws'),
-      protocols: ['ngrok-skip-browser-warning'],
-    );
-
-    setState(() {
-      isConnected = true;
-    });
-    channel.stream.listen((message) {
-      print(message);
-      setState(() {});
-    });
+    connectWebSocket();
   }
 
   @override
   void dispose() {
-    isConnected = false;
     channel.sink.close();
     super.dispose();
+  }
+
+  void connectWebSocket() {
+    channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+    setState(() {
+      isConnected = true;
+      void connectWebSocket() {
+        channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+        setState(() {
+          isConnected = true;
+        });
+        channel.stream.listen(
+          (message) {
+            print("WEBSOCKET: $message");
+          },
+          onDone: () {
+            setState(() {
+              isConnected = false;
+            });
+          },
+          onError: (error) {
+            setState(() {
+              isConnected = false;
+            });
+          },
+        );
+      }
+    });
   }
 }
 
@@ -97,9 +119,77 @@ class ConfigScreen extends StatefulWidget {
 }
 
 class _ConfigScreenState extends State<ConfigScreen> {
+  Future<List<dynamic>> fetchConfigs() async {
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/config"),
+        headers: {
+          "ngrok-skip-browser-warning": "true",
+          "Content-Type": "application/json",
+          "x-api-key": "Aaloo",
+        },
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      throw Exception("Server returned ${response.statusCode}");
+    } catch (e) {
+      throw Exception("Network Error: $e");
+    }
+  }
+
+  Future<void> updateConfig(String key, String value) async {
+    final response = await http.patch(
+      Uri.parse("$baseUrl/config/$key"),
+      headers: {
+        "ngrok-skip-browser-warning": "true",
+        "Content-Type": "application/json",
+        "x-api-key": "Aaloo",
+      },
+      body: jsonEncode({"value": value}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception("Failed to update config");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text("Config Screen")));
+    return FutureBuilder<List<dynamic>>(
+      future: fetchConfigs(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text(snapshot.error.toString()));
+        }
+        final configs = snapshot.data!;
+        return ListView.builder(
+          itemCount: configs.length,
+          itemBuilder: (context, index) {
+            final config = configs[index];
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ListTile(
+                onTap: () async {
+                  final controller = TextEditingController(
+                    text: config["value"].toString(),
+                  );
+                },
+                title: Text(
+                  config["key"],
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(config["description"]),
+                trailing: Text(config["value"].toString()),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 }
 
@@ -111,16 +201,20 @@ class FlagListScreen extends StatefulWidget {
 
 class _FlagListScreenState extends State<FlagListScreen> {
   Future<void> toggleFlag(String flagName) async {
-    final url = Uri.parse(wsUrl);
     final response = await http.patch(
       Uri.parse("$baseUrl/flags/$flagName/toggle"),
       headers: {
         "ngrok-skip-browser-warning": "true",
         "Content-Type": "application/json",
+        "x-api-key": "Aaloo",
       },
     );
+
+    print("Status Code: ${response.statusCode}");
+    print("Body: ${response.body}");
+
     if (response.statusCode != 200) {
-      throw Exception('ERRORR !! Failed to toggle flag!!');
+      throw Exception("Failed to toggle flag");
     }
   }
 
@@ -181,15 +275,12 @@ class _FlagListScreenState extends State<FlagListScreen> {
 
   Future<List<dynamic>> fetchFlags() async {
     try {
-      final url = Uri.parse(baseUrl);
       final response = await http.get(
-        Uri.parse(
-          "$baseUrl/flags",
-        ), // or whatever your endpoint variable is named
+        Uri.parse("$baseUrl/flags"),
         headers: {
           "ngrok-skip-browser-warning": "true",
           "Content-Type": "application/json",
-          // Keep any other existing headers here (like Authorization tokens)
+          "x-api-key": "Aaloo", // Day 6 API Key protection match
         },
       );
       if (response.statusCode == 200) {
