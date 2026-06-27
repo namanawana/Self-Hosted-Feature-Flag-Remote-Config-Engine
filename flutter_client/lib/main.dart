@@ -17,7 +17,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Feature Flag Project',
-      theme: ThemeData.dark(),
+      theme: ThemeData.dark().copyWith(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color.fromARGB(255, 6, 104, 104),
+          brightness: Brightness.dark,
+        ),
+      ),
       home: const HomeScreen(),
     );
   }
@@ -44,12 +49,40 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 14),
             Text(
               isConnected ? '🟢 Connected!' : '🔴 Disconnected!',
-              style: const TextStyle(fontSize: 16),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
+              ),
             ),
           ],
         ),
       ),
       body: screens[selectedIndex],
+      floatingActionButton: selectedIndex == 0
+          ? FloatingActionButton(
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CreateFlagScreen()),
+                );
+                setState(() {});
+              },
+              child: const Icon(Icons.add),
+            )
+          : null,
+      persistentFooterButtons: [
+        if (selectedIndex == 0)
+          IconButton(
+            icon: const Icon(Icons.person_search),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EvaluateUserScreen()),
+              );
+            },
+          ),
+      ],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: selectedIndex,
         onTap: (int index) {
@@ -118,6 +151,210 @@ class ConfigScreen extends StatefulWidget {
   State<ConfigScreen> createState() => _ConfigScreenState();
 }
 
+class CreateFlagScreen extends StatefulWidget {
+  const CreateFlagScreen({super.key});
+
+  @override
+  State<CreateFlagScreen> createState() => _CreateFlagScreenState();
+}
+
+class EvaluateUserScreen extends StatefulWidget {
+  const EvaluateUserScreen({super.key});
+
+  @override
+  State<EvaluateUserScreen> createState() => _EvaluateUserScreenState();
+}
+
+class _EvaluateUserScreenState extends State<EvaluateUserScreen> {
+  final TextEditingController userIdController = TextEditingController();
+  List<dynamic> activeFlags = [];
+  Future<void> evaluateUser() async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/evaluate"),
+      headers: {
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
+        "x-api-key": "Aaloo",
+      },
+      body: jsonEncode({"user_id": userIdController.text}),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      setState(() {
+        activeFlags = data["active_flags"];
+      });
+    } else {
+      throw Exception("Failed to evaluate user");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Evaluate User")),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: userIdController,
+              decoration: const InputDecoration(
+                labelText: "User ID",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  await evaluateUser();
+                },
+                child: const Text("Evaluate"),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                "Active Flags",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: ListView.builder(
+                itemCount: activeFlags.length,
+                itemBuilder: (context, index) {
+                  return Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.flag),
+                      title: Text(activeFlags[index]["name"]),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CreateFlagScreenState extends State<CreateFlagScreen> {
+  final TextEditingController nameController = TextEditingController();
+  String selectedEnvironment = "Development";
+  String selectedRule = "everyone";
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Create Flag")),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: "Flag Name",
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            DropdownButtonFormField<String>(
+              initialValue: selectedEnvironment,
+              decoration: const InputDecoration(
+                labelText: "Environment",
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(
+                  value: "Development",
+                  child: Text("Development"),
+                ),
+                DropdownMenuItem(
+                  value: "Production",
+                  child: Text("Production"),
+                ),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  selectedEnvironment = value!;
+                });
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            DropdownButtonFormField<String>(
+              initialValue: selectedRule,
+              decoration: const InputDecoration(
+                labelText: "Rule Type",
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(value: "everyone", child: Text("Everyone")),
+                DropdownMenuItem(value: "beta_only", child: Text("Beta Users")),
+                DropdownMenuItem(
+                  value: "percentage",
+                  child: Text("Percentage Rollout"),
+                ),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  selectedRule = value!;
+                });
+              },
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  await createFlag();
+
+                  if (!mounted) return;
+
+                  Navigator.pop(context);
+                },
+                child: const Text("Create Flag"),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> createFlag() async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/flags"),
+      headers: {
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
+        "x-api-key": "Aaloo",
+      },
+      body: jsonEncode({
+        "name": nameController.text,
+        "enabled": false,
+        "environment": selectedEnvironment,
+        "rule_type": selectedRule,
+        "rule_value": null,
+      }),
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception("Failed to create flag");
+    }
+  }
+}
+
 class _ConfigScreenState extends State<ConfigScreen> {
   Future<List<dynamic>> fetchConfigs() async {
     try {
@@ -172,6 +409,10 @@ class _ConfigScreenState extends State<ConfigScreen> {
             final config = configs[index];
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: ListTile(
                 onTap: () async {
                   final controller = TextEditingController(
@@ -180,7 +421,11 @@ class _ConfigScreenState extends State<ConfigScreen> {
                 },
                 title: Text(
                   config["key"],
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
+                  ),
                 ),
                 subtitle: Text(config["description"]),
                 trailing: Text(config["value"].toString()),
@@ -247,7 +492,7 @@ class _FlagListScreenState extends State<FlagListScreen> {
                     flag["name"],
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                      fontSize: 20,
                     ),
                   ),
                   subtitle: Text("Environment: ${flag["environment"]}"),
