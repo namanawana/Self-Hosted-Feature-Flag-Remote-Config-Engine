@@ -48,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const Text('Feature Flags'),
             const SizedBox(width: 14),
             Text(
-              isConnected ? '🟢 Connected!' : '🔴 Disconnected!',
+              isConnected ? "🟢 Connected" : "🟡 Reconnecting...",
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -117,31 +117,39 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void connectWebSocket() {
+    if (isConnected) return;
     channel = WebSocketChannel.connect(Uri.parse(wsUrl));
     setState(() {
       isConnected = true;
-      void connectWebSocket() {
-        channel = WebSocketChannel.connect(Uri.parse(wsUrl));
-        setState(() {
-          isConnected = true;
-        });
-        channel.stream.listen(
-          (message) {
-            print("WEBSOCKET: $message");
-          },
-          onDone: () {
-            setState(() {
-              isConnected = false;
-            });
-          },
-          onError: (error) {
-            setState(() {
-              isConnected = false;
-            });
-          },
-        );
-      }
     });
+    channel.stream.listen(
+      (message) {
+        print("WEBSOCKET: $message");
+      },
+      onDone: () {
+        setState(() {
+          isConnected = false;
+        });
+        Future.delayed(const Duration(seconds: 3), () {
+          connectWebSocket();
+        });
+      },
+      onError: (error) {
+        setState(() {
+          isConnected = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Server unavailable. Reconnecting..."),
+            ),
+          );
+        }
+        Future.delayed(const Duration(seconds: 3), () {
+          connectWebSocket();
+        });
+      },
+    );
   }
 }
 
@@ -266,7 +274,6 @@ class _CreateFlagScreenState extends State<CreateFlagScreen> {
             ),
 
             const SizedBox(height: 16),
-
             DropdownButtonFormField<String>(
               initialValue: selectedEnvironment,
               decoration: const InputDecoration(
