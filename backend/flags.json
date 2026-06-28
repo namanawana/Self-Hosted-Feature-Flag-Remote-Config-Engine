@@ -8,14 +8,14 @@
   },
   {
     "name": "dark_mode",
-    "enabled": false,
+    "enabled": true,
     "environment": "Development",
     "rule_type": "beta_only",
     "rule_value": null
   },
   {
     "name": "something something",
-    "enabled": true,
+    "enabled": false,
     "environment": "string",
     "rule_type": "string",
     "rule_value": 0

@@ -72,11 +72,13 @@ async def toggle_flag(name:str):
     if name not in flag_store.flags:
         raise HTTPException(status_code=404, detail="Flag not found")
     updated_flag = flag_store.toggle_flag(name)
+    print(f"Broadcasting to {len(manager.active_connections)} clients")  
     await manager.broadcast({
-        "type":"flag updated",
-        "flag":updated_flag.model_dump()
-    })
-    return updated_flag
+        "type": "flag_updated",
+        "flag": updated_flag.model_dump()
+        })
+    
+    return updated_flag.model_dump()
 
 @app.delete("/flags/{name}", dependencies=[Depends(verify_api_key)])
 async def delete_flag(name:str):
