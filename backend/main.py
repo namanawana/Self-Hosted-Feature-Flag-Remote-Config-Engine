@@ -67,7 +67,7 @@ async def create_flag(flag:FeatureFlag):
     })
     return flag 
 
-@app.patch("/flags/{name}/toggle", dependencies=[Depends(verify_api_key)])
+@app.patch("/flags/{name}/toggle")
 async def toggle_flag(name:str):
     if name not in flag_store.flags:
         raise HTTPException(status_code=404, detail="Flag not found")
