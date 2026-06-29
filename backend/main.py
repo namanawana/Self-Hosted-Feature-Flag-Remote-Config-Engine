@@ -53,7 +53,11 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 @app.get("/flags")
 def get_flags():
-    return list(flag_store.flags.values())
+    return [f for f in flag_store.flags.values() if not f.archived]
+
+@app.get("/flags/archived")
+def get_archived_flags():
+    return [f for f in flag_store.flags.values() if f.archived]
 
 @app.post("/flags", dependencies=[Depends(verify_api_key)])
 async def create_flag(flag:FeatureFlag):
@@ -78,6 +82,17 @@ async def toggle_flag(name:str):
         "flag": updated_flag.model_dump()
         })
     
+    return updated_flag.model_dump()
+
+@app.patch("/flags/{name}/archive", dependencies=[Depends(verify_api_key)])
+async def archive_flag(name: str):
+    if name not in flag_store.flags:
+        raise HTTPException(status_code=404, detail="Flag not found")
+    updated_flag = flag_store.archive_flag(name)
+    await manager.broadcast({
+        "type": "flag_archived",
+        "flag": updated_flag.model_dump()
+    })
     return updated_flag.model_dump()
 
 @app.delete("/flags/{name}", dependencies=[Depends(verify_api_key)])

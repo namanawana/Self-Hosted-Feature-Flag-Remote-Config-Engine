@@ -39,6 +39,12 @@ class FlagStore:
         del self.flags[name]
         self.save_flags()
         return True
+    def archive_flag(self, name: str):
+        if name not in self.flags:
+            return None
+        self.flags[name].archived = not self.flags[name].archived
+        self.save_flags()
+        return self.flags[name]
     def evaluate_flags(self, user_id: str):
         active_flags = []
         for flag in self.flags.values():

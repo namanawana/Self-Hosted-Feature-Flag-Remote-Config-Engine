@@ -6,6 +6,7 @@ class FeatureFlag(BaseModel):
     environment :str 
     rule_type: str
     rule_value: Optional[int]= None
+    archived: bool = False
 
 class ConfigVar(BaseModel):
     key: str

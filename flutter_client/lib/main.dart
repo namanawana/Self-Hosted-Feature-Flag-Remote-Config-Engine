@@ -4,8 +4,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-const String baseUrl = "https://landing-traffic-sixteen.ngrok-free.dev";
-const String wsUrl = "ws://landing-traffic-sixteen.ngrok-free.dev/ws";
+const String baseUrl = "http://localhost:8000";
+const String wsUrl = "ws://localhost:8000/ws";
 
 void main() {
   runApp(const MyApp());
@@ -72,7 +72,13 @@ class _HomeScreenState extends State<HomeScreen> {
   int selectedIndex = 0;
   bool isConnected = false;
   late WebSocketChannel channel;
-  final screens = [const FlagListScreen(), const ConfigScreen()];
+  int refreshKey = 0;
+
+  List<Widget> get screens => [
+    FlagListScreen(key: ValueKey('flags_$refreshKey')),
+    ConfigScreen(key: ValueKey('config_$refreshKey')),
+    ArchivedFlagListScreen(key: ValueKey('archived_$refreshKey')),
+  ];
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -141,6 +147,10 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.settings),
             label: 'Configuration Settings',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.archive),
+            label: 'Archived',
+          ),
         ],
       ),
     );
@@ -167,6 +177,15 @@ class _HomeScreenState extends State<HomeScreen> {
     channel.stream.listen(
       (message) {
         print("WEBSOCKET: $message");
+        try {
+          final data = jsonDecode(message);
+          final type = data["type"];
+          if (type == "flag_updated" || type == "flag_created" || type == "flag_archived" || type == "flag_deleted") {
+            setState(() {
+              refreshKey++;
+            });
+          }
+        } catch (_) {}
       },
       onDone: () {
         setState(() {
@@ -220,6 +239,19 @@ class _FlagListScreenState extends State<FlagListScreen> {
     }
   }
 
+  Future<void> archiveFlag(String flagName) async {
+    final response = await http.patch(
+      Uri.parse("$baseUrl/flags/$flagName/archive"),
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": "Aaloo",
+      },
+    );
+    if (response.statusCode != 200) {
+      throw Exception("Failed to archive flag");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<dynamic>>(
@@ -256,88 +288,123 @@ class _FlagListScreenState extends State<FlagListScreen> {
                   horizontal: 18,
                   vertical: 10,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 4,
-                  ),
-                  child: SwitchListTile(
-                    secondary: Icon(
-                      flag["enabled"] ? Icons.verified : Icons.flag_outlined,
-                      color: flag["enabled"] ? Colors.greenAccent : Colors.grey,
-                      size: 32,
-                    ),
-                    title: Text(
-                      flag["name"],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 22,
-                        letterSpacing: 0.5,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 4,
+                      ),
+                      child: SwitchListTile(
+                        secondary: Icon(
+                          flag["enabled"] ? Icons.verified : Icons.flag_outlined,
+                          color: flag["enabled"] ? Colors.greenAccent : Colors.grey,
+                          size: 32,
+                        ),
+                        title: Text(
+                          flag["name"],
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 22,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        subtitle: Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            Chip(
+                              avatar: const Icon(
+                                Icons.public,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                              backgroundColor: flag["rule_type"] == "everyone"
+                                  ? Colors.green
+                                  : flag["rule_type"] == "beta_only"
+                                  ? Colors.blue
+                                  : Colors.orange,
+                              label: Text(
+                                flag["environment"],
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                            Chip(
+                              avatar: const Icon(
+                                Icons.rule,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                              backgroundColor: Colors.green,
+                              label: Text(
+                                flag["rule_type"] == "everyone"
+                                    ? "Everyone"
+                                    : flag["rule_type"] == "beta_only"
+                                    ? "Beta Users"
+                                    : "${flag["rule_value"]}% Rollout",
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                        value: flag["enabled"],
+                        thumbColor: WidgetStateProperty.resolveWith((states) {
+                          if (states.contains(WidgetState.selected)) {
+                            return Colors.greenAccent;
+                          }
+                          return Colors.grey;
+                        }),
+                        trackColor: WidgetStateProperty.resolveWith((states) {
+                          if (states.contains(WidgetState.selected)) {
+                            return Colors.teal;
+                          }
+                          return Colors.grey.shade700;
+                        }),
+                        onChanged: (bool newValue) async {
+                          try {
+                            await toggleFlag(flag["name"]);
+                            setState(() {});
+                          } catch (e) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(
+                              context,
+                            ).showSnackBar(SnackBar(content: Text(e.toString())));
+                          }
+                        },
                       ),
                     ),
-                    subtitle: Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: [
-                        Chip(
-                          avatar: const Icon(
-                            Icons.public,
-                            size: 18,
-                            color: Colors.white,
+                    // Archive button
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12, bottom: 8),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          icon: const Icon(Icons.archive_outlined, size: 18),
+                          label: const Text("Archive"),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.orangeAccent,
                           ),
-                          backgroundColor: flag["rule_type"] == "everyone"
-                              ? Colors.green
-                              : flag["rule_type"] == "beta_only"
-                              ? Colors.blue
-                              : Colors.orange,
-                          label: Text(
-                            flag["environment"],
-                            style: const TextStyle(color: Colors.white),
-                          ),
+                          onPressed: () async {
+                            try {
+                              await archiveFlag(flag["name"]);
+                              setState(() {});
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text("'${flag["name"]}' archived"),
+                                ),
+                              );
+                            } catch (e) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(e.toString())),
+                              );
+                            }
+                          },
                         ),
-                        Chip(
-                          avatar: const Icon(
-                            Icons.rule,
-                            size: 18,
-                            color: Colors.white,
-                          ),
-                          backgroundColor: Colors.green,
-                          label: Text(
-                            flag["rule_type"] == "everyone"
-                                ? "Everyone"
-                                : flag["rule_type"] == "beta_only"
-                                ? "Beta Users"
-                                : "${flag["rule_value"]}% Rollout",
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                    value: flag["enabled"],
-                    thumbColor: WidgetStateProperty.resolveWith((states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return Colors.greenAccent;
-                      }
-                      return Colors.grey;
-                    }),
-                    trackColor: WidgetStateProperty.resolveWith((states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return Colors.teal;
-                      }
-                      return Colors.grey.shade700;
-                    }),
-                    onChanged: (bool newValue) async {
-                      try {
-                        await toggleFlag(flag["name"]);
-                        setState(() {});
-                      } catch (e) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text(e.toString())));
-                      }
-                    },
-                  ),
+                  ],
                 ),
               ),
             );
@@ -603,6 +670,130 @@ class _EvaluateUserScreenState extends State<EvaluateUserScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class ArchivedFlagListScreen extends StatefulWidget {
+  const ArchivedFlagListScreen({super.key});
+  @override
+  State<ArchivedFlagListScreen> createState() => _ArchivedFlagListScreenState();
+}
+
+class _ArchivedFlagListScreenState extends State<ArchivedFlagListScreen> {
+  Future<List<dynamic>> fetchArchivedFlags() async {
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/flags/archived"),
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": "Aaloo",
+        },
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      throw Exception('Server returned ${response.statusCode}');
+    } catch (e) {
+      throw Exception('Network Error: $e');
+    }
+  }
+
+  Future<void> restoreFlag(String flagName) async {
+    final response = await http.patch(
+      Uri.parse("$baseUrl/flags/$flagName/archive"),
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": "Aaloo",
+      },
+    );
+    if (response.statusCode != 200) {
+      throw Exception("Failed to restore flag");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<dynamic>>(
+      future: fetchArchivedFlags(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text(snapshot.error.toString()));
+        }
+
+        final flags = snapshot.data!;
+
+        if (flags.isEmpty) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.archive_outlined, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  "No archived flags",
+                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          itemCount: flags.length,
+          itemBuilder: (context, index) {
+            final flag = flags[index];
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              child: ListTile(
+                leading: const Icon(
+                  Icons.archive,
+                  color: Colors.orangeAccent,
+                  size: 32,
+                ),
+                title: Text(
+                  flag["name"],
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                  ),
+                ),
+                subtitle: Text(
+                  "${flag['environment']} • ${flag['rule_type']}",
+                ),
+                trailing: TextButton.icon(
+                  icon: const Icon(Icons.unarchive, size: 18),
+                  label: const Text("Restore"),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.greenAccent,
+                  ),
+                  onPressed: () async {
+                    try {
+                      await restoreFlag(flag["name"]);
+                      setState(() {});
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text("'${flag["name"]}' restored"),
+                        ),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(e.toString())),
+                      );
+                    }
+                  },
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

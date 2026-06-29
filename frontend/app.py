@@ -147,6 +147,7 @@ class FeatureFlagApp(App):
         Binding("n", "new_flag", "New Flag"),
         Binding("d", "delete_flag", "Delete"),
         Binding("r", "refresh", "Refresh"),
+        Binding("a", "archive_flag", "Archive/Restore"),
     ]
 
     def __init__(self):
@@ -164,7 +165,7 @@ class FeatureFlagApp(App):
         table = self.query_one(DataTable)
         table.cursor_type = "row"
         table.add_columns(
-            "Name", "Status", "Environment", "Rule", "Rule Value"
+            "Name", "Status", "Environment", "Rule", "Rule Value", "Archived"
         )
         await self.load_flags()
         
@@ -172,11 +173,15 @@ class FeatureFlagApp(App):
 
     
     async def load_flags(self) -> None:
+        """Load ALL flags (active + archived) into one view"""
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.get(f"{BASE_URL}/flags")
-            flags_list = response.json()
-            self.flags = {f["name"]: f for f in flags_list}
+                active_resp = await client.get(f"{BASE_URL}/flags")
+                archived_resp = await client.get(f"{BASE_URL}/flags/archived")
+            active_list = active_resp.json()
+            archived_list = archived_resp.json()
+            all_flags = active_list + archived_list
+            self.flags = {f["name"]: f for f in all_flags}
             self.refresh_table()
         except Exception as e:
             self.notify(f"Error loading flags: {e}", severity="error")
@@ -191,6 +196,7 @@ class FeatureFlagApp(App):
             status = "ON  ✅" if flag["enabled"] else "OFF ❌"
             rule_type = flag["rule_type"]
             rule_value = str(flag["rule_value"]) if flag["rule_value"] else "-"
+            archived = "📦 YES" if flag.get("archived", False) else "—"
 
             table.add_row(
                 flag["name"],
@@ -198,6 +204,7 @@ class FeatureFlagApp(App):
                 flag["environment"],
                 rule_type,
                 rule_value,
+                archived,
                 key=flag["name"]
             )
 
@@ -244,6 +251,17 @@ class FeatureFlagApp(App):
             self.refresh_table()
             self.notify(f"🗑️ Flag '{name}' deleted", timeout=2)
 
+        elif msg_type == "flag_archived":
+            flag = data["flag"]
+            name = flag["name"]
+            is_archived = flag.get("archived", False)
+            self.flags[name] = flag
+            self.refresh_table()
+            if is_archived:
+                self.notify(f"📦 '{name}' archived", timeout=2)
+            else:
+                self.notify(f"♻️ '{name}' restored", timeout=2)
+
     def action_quit(self) -> None:
         if self.ws_task:
             self.ws_task.cancel()
@@ -252,6 +270,33 @@ class FeatureFlagApp(App):
     async def action_refresh(self) -> None:
         await self.load_flags()
         self.notify("🔄 Refreshed!", timeout=1)
+
+    async def action_archive_flag(self) -> None:
+        """a key — archive/unarchive selected flag"""
+        table = self.query_one(DataTable)
+        if not table.rows:
+            return
+        row = table.cursor_row
+        flag_name = table.get_cell_at((row, 0))
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.patch(
+                    f"{BASE_URL}/flags/{flag_name}/archive",
+                    headers=HEADERS
+                )
+            if response.status_code == 200:
+                updated = response.json()
+                self.flags[flag_name] = updated
+                self.refresh_table()
+                if updated["archived"]:
+                    self.notify(f"📦 Archived '{flag_name}'", timeout=2)
+                else:
+                    self.notify(f"♻️ Restored '{flag_name}'", timeout=2)
+            else:
+                self.notify("Archive failed!", severity="error")
+        except Exception as e:
+            self.notify(f"Error: {e}", severity="error")
 
     
     async def action_toggle_flag(self) -> None:

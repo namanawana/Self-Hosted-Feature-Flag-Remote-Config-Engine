@@ -4,20 +4,23 @@
     "enabled": false,
     "environment": "Development",
     "rule_type": "beta_only",
-    "rule_value": null
+    "rule_value": null,
+    "archived": true
   },
   {
     "name": "dark_mode",
     "enabled": true,
     "environment": "Development",
     "rule_type": "beta_only",
-    "rule_value": null
+    "rule_value": null,
+    "archived": false
   },
   {
     "name": "something something",
-    "enabled": false,
+    "enabled": true,
     "environment": "string",
     "rule_type": "string",
-    "rule_value": 0
+    "rule_value": 0,
+    "archived": false
   }
 ]
