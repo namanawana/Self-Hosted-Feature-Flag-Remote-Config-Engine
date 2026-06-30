@@ -14,7 +14,7 @@
 
 ## 📌 What Is This?
 
-This project is a **DIY version of tools like LaunchDarkly and Firebase Remote Config** — built entirely from scratch as part of GDSC IITR Project 02.
+This project is a **DIY version of tools like LaunchDarkly and Firebase Remote Config** — built entirely from scratch as part of GDSC IITR Project .
 
 It gives developers a **remote control for their app** — you can:
 - Turn features **ON/OFF instantly** without releasing a new app version
@@ -226,10 +226,7 @@ flutter pub get
 flutter run
 ```
 
-For browser:
-```bash
-flutter run -d chrome
-```
+
 
 For macOS desktop:
 ```bash
@@ -242,7 +239,10 @@ flutter run -d android
 # or
 flutter run -d ios
 ```
-
+For browser:
+```bash
+flutter run -d chrome
+```
 **Important:** Make sure the backend is running on `localhost:8000` before starting the Flutter app. The URL is configured at the top of `lib/main.dart`:
 ```dart
 const String baseUrl = "http://localhost:8000";
@@ -400,8 +400,8 @@ If the WebSocket connection fails, both the TUI and Flutter app auto-retry every
 
 | Person | Role |
 |---|---|
-| Naman Awana | Python Backend + FastAPI + WebSocket Server |
-| Palak | Flutter Client App + Textual Terminal UI |
+| Naman Awana | Python Backend + Textual Terminal UI|
+| Palakpreet Kaur | Flutter Client App |
 
 ---
 
