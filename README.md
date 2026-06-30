@@ -4,14 +4,6 @@
 
 ---
 
-## 🎬 Demo Video
-[Add demo video link here]
-
-## 🌐 Live Backend URL
-[Add deployed backend URL here]
-
----
-
 ## 📌 What Is This?
 
 This project is a **DIY version of tools like LaunchDarkly and Firebase Remote Config** — built entirely from scratch as part of GDSC IITR Project .
