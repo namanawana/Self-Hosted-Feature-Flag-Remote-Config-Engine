@@ -1,4 +1,4 @@
-#  Self-Hosted Feature Flag & Remote Config Engine
+# 🚩 Self-Hosted Feature Flag & Remote Config Engine
 
 > A production-inspired, real-time feature flag system built from scratch — no third-party services, no black boxes. Just Python, WebSockets, and Flutter working together.
 
@@ -7,7 +7,10 @@
 ## 🎬 Demo Video
 [Add demo video link here]
 
+## 🌐 Live Backend URL
+[Add deployed backend URL here]
 
+---
 
 ## 📌 What Is This?
 
@@ -15,11 +18,12 @@ This project is a **DIY version of tools like LaunchDarkly and Firebase Remote C
 
 It gives developers a **remote control for their app** — you can:
 - Turn features **ON/OFF instantly** without releasing a new app version
-- **Target specific users** — only beta users or a random 10% sample
-- **Change app settings** (like welcome messages) on the fly
+- **Target specific users** — only beta users or a consistent percentage sample
+- **Change app settings** (like welcome messages) live from the Flutter app
 - See all changes **reflect in real-time** across every connected client
 
 Professional tools that do the same thing:
+
 | Tool | Monthly Cost |
 |---|---|
 | LaunchDarkly | $75–$300+ |
@@ -34,22 +38,26 @@ Professional tools that do the same thing:
 ## ✨ Features
 
 ### Core Features
-- **Feature Flags** — Simple ON/OFF switches. Flip `dark_mode_beta` ON and every connected client sees it instantly
-- **Remote Config** — Key-value settings like `welcome_message = "Hello!"`. Change without redeploying
+- **Feature Flags** — Simple ON/OFF switches. Flip `dark_mode` ON and every connected client sees it instantly
+- **Remote Config** — Key-value settings like `welcome_message = "Welcome to our app!"`. Change values live without redeploying — editable directly in the Flutter app
 - **Real-Time Sync** — WebSocket broadcast pushes every flag change to ALL connected clients instantly — no polling, no refresh
 - **Group Rollouts** — Three targeting rule types:
   - `everyone` — All users get the feature
-  - `beta_only` — Only specific user IDs get the feature
-  - `percentage` — Consistent hash-based rollout (e.g. 10% of users)
+  - `beta_only` — Only specific user IDs in the allowlist get the feature
+  - `percentage` — Consistent hash-based rollout (e.g. 15% of users)
 - **User Evaluation** — Pass any `user_id` to `/evaluate` and get back exactly which flags are active for that user
 
-### Additional Features (Beyond Basic Requirements)
+### Additional Features
 - **Archive Flags** — Hide a flag from the Flutter app without deleting it. Press `A` in the TUI to archive/unarchive. Archived flags remain visible in the TUI for developer management but disappear from the client app instantly
-- **Consistent Percentage Hashing** — Uses `hashlib.md5` to ensure the same user always gets the same result for percentage rollouts. `user123` will always either be in the 10% or not — never changes between API calls
-- **API Key Middleware** — Developer routes (create, delete) are protected with an API key. Public routes (toggle, evaluate, read) are open — matching real-world security patterns
+- **Config Screen in Flutter** — A dedicated tab in the Flutter app to view and live-edit all remote config values. Tap any config entry to update it inline
+- **Consistent Percentage Hashing** — Uses `hashlib.md5` to hash the `user_id` — ensures the same user always gets the same result for percentage rollouts. `user123` will always either be in the 15% or not — never changes between API calls
+- **API Key Middleware** — Developer routes (create, delete, archive) are protected with an API key via `x-api-key` header. Public routes (toggle, evaluate, read) are open — matching real-world security patterns
 - **WebSocket Reconnection** — Both the Textual TUI and Flutter app auto-reconnect every 3 seconds if the server goes down
-- **Connection Status Indicator** — Flutter app shows a live green/orange dot showing WebSocket connection state
-- **GET /flags/all** — Separate route for the TUI that returns ALL flags including archived ones, protected by API key
+- **Connection Status Indicator** — Flutter app shows a live green/orange dot in the app bar showing WebSocket connection state
+- **GET /flags/all** — Route for the TUI that returns ALL flags including archived ones for full developer visibility
+- **GET /flags/archived** — Separate route to fetch only archived flags
+- **GET /flags/stats** — Returns total/enabled/disabled flag counts at a glance
+- **Unit Tests** — `test_store.py` and `test_configstore.py` cover the core data store logic
 
 ---
 
@@ -73,7 +81,7 @@ Professional tools that do the same thing:
 │  Delete flags       │   │  Toggle flags       │
 │  Toggle flags       │   │  Real-time updates  │
 │  Archive flags      │   │  Evaluate users     │
-│  Real-time updates  │   │  Config editor      │
+│  Real-time updates  │   │  Edit remote config │
 └─────────────────────┘   └─────────────────────┘
 ```
 
@@ -88,12 +96,12 @@ Professional tools that do the same thing:
 | Python 3.12 | Backend language |
 | FastAPI | Web framework + WebSocket support |
 | Uvicorn | ASGI server |
-| Pydantic | Data validation and schemas |
-| Websockets | WebSocket client in Textual TUI |
-| Httpx | Async HTTP client in Textual TUI |
+| Pydantic v2 | Data validation and schemas |
+| websockets | WebSocket client in Textual TUI |
+| httpx | Async HTTP client in Textual TUI |
 | Textual | Terminal UI framework |
 | python-dotenv | Environment variable management |
-| Flutter + Dart | Demo client mobile/web app |
+| Flutter + Dart | Demo client desktop/mobile/web app |
 | web_socket_channel | WebSocket client in Flutter |
 | http (Flutter) | REST API calls in Flutter |
 | JSON files | Lightweight storage (no database needed) |
@@ -107,13 +115,14 @@ Self-Hosted-Feature-Flag-Remote-Config-Engine/
 │
 ├── backend/
 │   ├── main.py              # FastAPI app — all routes + WebSocket server
-│   ├── models.py            # Pydantic schemas (FeatureFlag, ConfigVar)
-│   ├── store.py             # FlagStore — load/save/toggle/delete/evaluate
-│   ├── config_store.py      # ConfigStore — load/save/update/delete configs
-│   ├── flags.json           # Flag storage (auto-created)
-│   ├── config.json          # Config storage (auto-created)
+│   ├── models.py            # Pydantic schemas (FeatureFlag, ConfigVar, Evaluate)
+│   ├── FlagStore.py         # FlagStore — load/save/toggle/delete/archive/evaluate
+│   ├── ConfigStore.py       # ConfigStore — load/save/update/delete configs
+│   ├── flags.json           # Flag storage (auto-created, pre-seeded)
+│   ├── config.json          # Config storage (auto-created, pre-seeded)
+│   ├── test_store.py        # Unit tests for FlagStore
+│   ├── test_configstore.py  # Unit tests for ConfigStore
 │   ├── requirements.txt     # Python dependencies
-│   ├── start.sh             # One-command server start
 │   ├── .env                 # API key (never committed)
 │   └── .env.example         # Template for environment variables
 │
@@ -150,14 +159,11 @@ git clone https://github.com/namanawana/Self-Hosted-Feature-Flag-Remote-Config-E
 cd Self-Hosted-Feature-Flag-Remote-Config-Engine
 ```
 
-**Step 2 — Create virtual environment**
+**Step 2 — Create and activate virtual environment**
 ```bash
 cd backend
 python3.12 -m venv venv
-```
 
-**Step 3 — Activate virtual environment**
-```bash
 # Mac/Linux
 source venv/bin/activate
 
@@ -165,12 +171,12 @@ source venv/bin/activate
 venv\Scripts\activate
 ```
 
-**Step 4 — Install dependencies**
+**Step 3 — Install dependencies**
 ```bash
 pip install -r requirements.txt
 ```
 
-**Step 5 — Set up environment variables**
+**Step 4 — Set up environment variables**
 ```bash
 cp .env.example .env
 ```
@@ -179,12 +185,12 @@ Open `.env` and set your API key:
 API_KEY=your_secret_key_here
 ```
 
-**Step 6 — Start the backend server**
+**Step 5 — Start the backend server**
 ```bash
 uvicorn main:app --reload
 ```
 Server runs at: `http://localhost:8000`
-API docs available at: `http://localhost:8000/docs`
+Interactive API docs available at: `http://localhost:8000/docs`
 
 ---
 
@@ -198,6 +204,7 @@ python app.py
 ```
 
 **TUI Keyboard Shortcuts:**
+
 | Key | Action |
 |---|---|
 | `Space` | Toggle selected flag ON/OFF |
@@ -222,6 +229,11 @@ flutter run
 For browser:
 ```bash
 flutter run -d chrome
+```
+
+For macOS desktop:
+```bash
+flutter run -d macos
 ```
 
 For mobile emulator:
@@ -251,7 +263,7 @@ Terminal 2 (TUI):
   cd frontend && python app.py
 
 Terminal 3 (Flutter):
-  cd flutter_client && flutter run -d chrome
+  cd flutter_client && flutter run -d macos
 ```
 
 ---
@@ -259,37 +271,59 @@ Terminal 3 (Flutter):
 ## 🧪 Testing the System
 
 ### Test 1 — Real-Time Flag Toggle
-1. Open Flutter app in browser
+1. Open the Flutter app
 2. Open TUI in terminal
 3. Select a flag in TUI, press `Space` to toggle
 4. Watch Flutter app update **instantly** — no refresh needed
 
 ### Test 2 — Create and Archive
 1. Press `N` in TUI → fill in flag details → press Create
-2. New flag appears in Flutter app instantly
+2. New flag appears in Flutter app instantly (via WebSocket)
 3. Press `A` on that flag in TUI → flag disappears from Flutter instantly
 4. Press `A` again → flag reappears in Flutter
 
 ### Test 3 — User Evaluation
-1. In Flutter app, tap the 👤 icon (bottom of screen)
+1. In the Flutter app, tap the 👤 icon (footer of Flags screen)
 2. Enter a user ID (e.g. `naman`) → tap Evaluate
 3. See which flags are active for that specific user
-4. Try different user IDs — percentage rollout gives consistent results
+4. Try different user IDs — percentage rollout gives consistent results (same user always gets same outcome)
 
-### Test 4 — API Directly
-Visit `http://localhost:8000/docs` to test all routes interactively.
+### Test 4 — Live Config Editing
+1. Open the Flutter app → switch to the **Configuration Settings** tab
+2. Tap any config entry (e.g. `welcome_message`)
+3. Edit the value in the dialog → tap Update
+4. The new value is saved immediately to the backend
+
+### Test 5 — API Directly
+Visit `http://localhost:8000/docs` to test all routes interactively using the built-in Swagger UI.
+
+### Test 6 — Run Unit Tests
+```bash
+cd backend
+python -m pytest test_store.py test_configstore.py -v
+```
 
 ---
 
 ## 🌱 Seed Data
 
-The project comes with 3 pre-loaded flags covering all three rule types:
+The project comes with pre-loaded data covering all three rule types:
+
+### Feature Flags (`flags.json`)
 
 | Flag | Status | Rule | Meaning |
 |---|---|---|---|
-| `new_checkout_flow` | ON | Beta Only (`naman`, `user1`, `user2`) | Only beta users see new checkout |
-| `dark_mode_beta` | OFF | Everyone | Dark mode feature — currently disabled |
-| `ai_recommendations` | ON | 10% Rollout | Only 10% of users see AI features |
+| `new_checkout_flow` | ON | Beta Only (`naman`, `palak`, `user1`) | Only allowlisted beta users see new checkout |
+| `dark_mode` | ON | Everyone | Dark mode — all users see it |
+| `ai_recommendations` | ON | 15% Rollout | Only ~15% of users (by consistent hash) see AI features |
+
+### Remote Config (`config.json`)
+
+| Key | Value | Description |
+|---|---|---|
+| `welcome_message` | `Welcome to our app!` | Shown on the home screen when user opens the app |
+| `max_login_attempts` | `5` | Maximum failed login attempts before lockout |
+| `support_email` | `support@example.com` | Support email shown in the help section |
 
 ---
 
@@ -297,28 +331,45 @@ The project comes with 3 pre-loaded flags covering all three rule types:
 
 Base URL: `http://localhost:8000`
 
-| Method | Route | Auth | Description |
+| Method | Route | Auth Required | Description |
 |---|---|---|---|
 | GET | `/flags` | No | Get all active (non-archived) flags |
-| POST | `/flags` | Yes | Create a new flag |
-| PATCH | `/flags/{name}/toggle` | No | Toggle flag ON/OFF |
-| DELETE | `/flags/{name}` | Yes | Delete a flag |
-| PATCH | `/flags/{name}/archive` | Yes | Archive/unarchive a flag |
-| GET | `/flags/all` | Yes | Get ALL flags including archived (TUI only) |
+| GET | `/flags/all` | No | Get ALL flags including archived (used by TUI) |
+| GET | `/flags/archived` | No | Get only archived flags |
 | GET | `/flags/stats` | No | Get total/enabled/disabled counts |
+| POST | `/flags` | **Yes** | Create a new flag |
+| PATCH | `/flags/{name}/toggle` | No | Toggle flag ON/OFF |
+| PATCH | `/flags/{name}/archive` | **Yes** | Archive/unarchive a flag |
+| DELETE | `/flags/{name}` | **Yes** | Delete a flag permanently |
 | GET | `/config` | No | Get all config variables |
-| POST | `/config` | Yes | Create a config variable |
-| PATCH | `/config/{key}` | No | Update a config value |
-| DELETE | `/config/{key}` | Yes | Delete a config variable |
+| POST | `/config` | **Yes** | Create a config variable |
+| PATCH | `/config/{key}` | **Yes** | Update a config value |
+| DELETE | `/config/{key}` | **Yes** | Delete a config variable |
 | POST | `/evaluate` | No | Get active flags for a specific user |
 | GET | `/health` | No | Server health check |
 | WS | `/ws` | No | WebSocket — real-time flag updates |
 
-For full request/response details see `API_DOCS.md`.
+> **Auth:** Protected routes require the header `x-api-key: <your_api_key>`.
+> For full request/response details see [API_DOCS.md](API_DOCS.md).
 
 ---
 
-## 💡 Assumptions & Design Decisions
+## 📡 WebSocket Events
+
+The server broadcasts JSON messages to all connected clients on every state change:
+
+| Event Type | Trigger |
+|---|---|
+| `flag_created` | A new flag is created |
+| `flag_updated` | A flag is toggled ON/OFF |
+| `flag_archived` | A flag is archived or restored |
+| `flag_deleted` | A flag is permanently deleted |
+
+Both the TUI and Flutter app listen for these events and update their UI automatically without any polling.
+
+---
+
+## 💡 Design Decisions
 
 ### 1. JSON File Storage (No Database)
 We chose JSON file storage over a database intentionally — this keeps the project self-contained with zero external dependencies. Anyone can clone and run without setting up PostgreSQL, MongoDB, or any database server.
@@ -333,12 +384,15 @@ Deleting a flag is permanent. Archiving hides it from clients but keeps it in st
 Percentage rollouts use `hashlib.md5` to hash the `user_id` — this ensures the same user always gets the same result. Unlike random assignment, a user won't flip between seeing and not seeing a feature on every request.
 
 ### 5. Separate Routes for TUI and Flutter
-`GET /flags` (public) returns only non-archived flags — used by Flutter.
-`GET /flags/all` (protected) returns everything including archived — used by TUI.
-This separation ensures the developer always has full visibility while end users only see relevant flags.
+`GET /flags` (public) returns only non-archived flags — used by the Flutter app.
+`GET /flags/all` (public) returns everything including archived — used by the TUI for full developer visibility.
+`GET /flags/archived` returns only archived flags for targeted queries.
 
-### 6. WebSocket Fallback
-If WebSocket connection fails, both the TUI and Flutter app auto-retry every 3 seconds. As a last resort fallback, polling `GET /flags` every few seconds would also work — real-time push is better but the system degrades gracefully.
+### 6. Config Editing in Flutter
+The Flutter app's Configuration Settings tab allows live editing of any config value by tapping a card. This demonstrates that remote config isn't just readable by clients — privileged clients can update values too.
+
+### 7. WebSocket Fallback
+If the WebSocket connection fails, both the TUI and Flutter app auto-retry every 3 seconds. As a last resort fallback, polling `GET /flags` would also work — real-time push is better but the system degrades gracefully.
 
 ---
 
@@ -346,8 +400,8 @@ If WebSocket connection fails, both the TUI and Flutter app auto-retry every 3 s
 
 | Person | Role |
 |---|---|
-| Naman Awana (Person A) | Python Backend + Textual Terminal UI + WebSocket Server |
-| Palakpreet Kaur (Person B) | Flutter Client App  |
+| Naman Awana | Python Backend + FastAPI + WebSocket Server |
+| Palak | Flutter Client App + Textual Terminal UI |
 
 ---
 
@@ -357,4 +411,4 @@ If WebSocket connection fails, both the TUI and Flutter app auto-retry every 3 s
 - [FastAPI WebSockets Guide](https://fastapi.tiangolo.com/advanced/websockets/)
 - [Textual Getting Started](https://textual.textualize.io/guide/app/)
 - [Flutter WebSocket Cookbook](https://docs.flutter.dev/cookbook/networking/web-sockets)
-- [Pydantic Docs](https://docs.pydantic.dev)
+- [Pydantic v2 Docs](https://docs.pydantic.dev)

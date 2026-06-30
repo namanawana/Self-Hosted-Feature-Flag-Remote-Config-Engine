@@ -1,7 +1,17 @@
 [
   {
     "key": "welcome_message",
-    "value": "Hellooo",
-    "description": "Shown on home screen"
+    "value": "Welcome to our app!",
+    "description": "Shown on the home screen when user opens the app"
+  },
+  {
+    "key": "max_login_attempts",
+    "value": "5",
+    "description": "Maximum number of failed login attempts before lockout"
+  },
+  {
+    "key": "support_email",
+    "value": "support@example.com",
+    "description": "Support email shown in the help section"
   }
 ]
