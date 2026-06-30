@@ -1,7 +1,7 @@
 [
   {
     "key": "welcome_message",
-    "value": "Welcome to our app!",
+    "value": "Hello it's me ",
     "description": "Shown on the home screen when user opens the app"
   },
   {
