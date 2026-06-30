@@ -77,7 +77,6 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Widget> get screens => [
     FlagListScreen(key: ValueKey('flags_$refreshKey')),
     ConfigScreen(key: ValueKey('config_$refreshKey')),
-    ArchivedFlagListScreen(key: ValueKey('archived_$refreshKey')),
   ];
   @override
   Widget build(BuildContext context) {
@@ -146,10 +145,6 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Configuration Settings',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.archive),
-            label: 'Archived',
           ),
         ],
       ),
@@ -239,18 +234,7 @@ class _FlagListScreenState extends State<FlagListScreen> {
     }
   }
 
-  Future<void> archiveFlag(String flagName) async {
-    final response = await http.patch(
-      Uri.parse("$baseUrl/flags/$flagName/archive"),
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": "Aaloo",
-      },
-    );
-    if (response.statusCode != 200) {
-      throw Exception("Failed to archive flag");
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -371,37 +355,6 @@ class _FlagListScreenState extends State<FlagListScreen> {
                             ).showSnackBar(SnackBar(content: Text(e.toString())));
                           }
                         },
-                      ),
-                    ),
-                    // Archive button
-                    Padding(
-                      padding: const EdgeInsets.only(right: 12, bottom: 8),
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          icon: const Icon(Icons.archive_outlined, size: 18),
-                          label: const Text("Archive"),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.orangeAccent,
-                          ),
-                          onPressed: () async {
-                            try {
-                              await archiveFlag(flag["name"]);
-                              setState(() {});
-                              if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text("'${flag["name"]}' archived"),
-                                ),
-                              );
-                            } catch (e) {
-                              if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(e.toString())),
-                              );
-                            }
-                          },
-                        ),
                       ),
                     ),
                   ],
@@ -656,7 +609,7 @@ class _EvaluateUserScreenState extends State<EvaluateUserScreen> {
                         color: Colors.greenAccent,
                       ),
                       title: Text(
-                        activeFlags[index]["name"],
+                        activeFlags[index].toString(),
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -674,126 +627,3 @@ class _EvaluateUserScreenState extends State<EvaluateUserScreen> {
   }
 }
 
-class ArchivedFlagListScreen extends StatefulWidget {
-  const ArchivedFlagListScreen({super.key});
-  @override
-  State<ArchivedFlagListScreen> createState() => _ArchivedFlagListScreenState();
-}
-
-class _ArchivedFlagListScreenState extends State<ArchivedFlagListScreen> {
-  Future<List<dynamic>> fetchArchivedFlags() async {
-    try {
-      final response = await http.get(
-        Uri.parse("$baseUrl/flags/archived"),
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": "Aaloo",
-        },
-      );
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      }
-      throw Exception('Server returned ${response.statusCode}');
-    } catch (e) {
-      throw Exception('Network Error: $e');
-    }
-  }
-
-  Future<void> restoreFlag(String flagName) async {
-    final response = await http.patch(
-      Uri.parse("$baseUrl/flags/$flagName/archive"),
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": "Aaloo",
-      },
-    );
-    if (response.statusCode != 200) {
-      throw Exception("Failed to restore flag");
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<dynamic>>(
-      future: fetchArchivedFlags(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return Center(child: Text(snapshot.error.toString()));
-        }
-
-        final flags = snapshot.data!;
-
-        if (flags.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.archive_outlined, size: 64, color: Colors.grey),
-                SizedBox(height: 16),
-                Text(
-                  "No archived flags",
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          itemCount: flags.length,
-          itemBuilder: (context, index) {
-            final flag = flags[index];
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              child: ListTile(
-                leading: const Icon(
-                  Icons.archive,
-                  color: Colors.orangeAccent,
-                  size: 32,
-                ),
-                title: Text(
-                  flag["name"],
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 20,
-                  ),
-                ),
-                subtitle: Text(
-                  "${flag['environment']} • ${flag['rule_type']}",
-                ),
-                trailing: TextButton.icon(
-                  icon: const Icon(Icons.unarchive, size: 18),
-                  label: const Text("Restore"),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.greenAccent,
-                  ),
-                  onPressed: () async {
-                    try {
-                      await restoreFlag(flag["name"]);
-                      setState(() {});
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text("'${flag["name"]}' restored"),
-                        ),
-                      );
-                    } catch (e) {
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(e.toString())),
-                      );
-                    }
-                  },
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}

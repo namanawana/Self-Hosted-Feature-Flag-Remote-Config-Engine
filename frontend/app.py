@@ -173,15 +173,11 @@ class FeatureFlagApp(App):
 
     
     async def load_flags(self) -> None:
-        """Load ALL flags (active + archived) into one view"""
         try:
             async with httpx.AsyncClient() as client:
-                active_resp = await client.get(f"{BASE_URL}/flags")
-                archived_resp = await client.get(f"{BASE_URL}/flags/archived")
-            active_list = active_resp.json()
-            archived_list = archived_resp.json()
-            all_flags = active_list + archived_list
-            self.flags = {f["name"]: f for f in all_flags}
+                response = await client.get(f"{BASE_URL}/flags/all")
+            flags_list = response.json()
+            self.flags = {f["name"]: f for f in flags_list}
             self.refresh_table()
         except Exception as e:
             self.notify(f"Error loading flags: {e}", severity="error")
@@ -192,11 +188,13 @@ class FeatureFlagApp(App):
         table = self.query_one(DataTable)
         table.clear()
 
+        self.sub_title = "All Flags"
+
         for flag in self.flags.values():
             status = "ON  ✅" if flag["enabled"] else "OFF ❌"
             rule_type = flag["rule_type"]
             rule_value = str(flag["rule_value"]) if flag["rule_value"] else "-"
-            archived = "📦 YES" if flag.get("archived", False) else "—"
+            archived = "📦 Yes" if flag.get("archived", False) else "—"
 
             table.add_row(
                 flag["name"],

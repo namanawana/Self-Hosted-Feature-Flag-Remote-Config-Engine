@@ -55,6 +55,10 @@ async def websocket_endpoint(websocket: WebSocket):
 def get_flags():
     return [f for f in flag_store.flags.values() if not f.archived]
 
+@app.get("/flags/all")
+def get_all_flags():
+    return list(flag_store.flags.values())
+
 @app.get("/flags/archived")
 def get_archived_flags():
     return [f for f in flag_store.flags.values() if f.archived]

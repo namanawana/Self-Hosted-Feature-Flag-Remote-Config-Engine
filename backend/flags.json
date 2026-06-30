@@ -1,26 +1,30 @@
 [
   {
-    "name": "dsark_mode",
-    "enabled": false,
-    "environment": "Development",
+    "name": "new_checkout_flow",
+    "enabled": true,
+    "environment": "production",
     "rule_type": "beta_only",
-    "rule_value": null,
-    "archived": true
+    "rule_value": [
+      "naman",
+      "palak",
+      "user1"
+    ],
+    "archived": false
   },
   {
     "name": "dark_mode",
     "enabled": true,
-    "environment": "Development",
-    "rule_type": "beta_only",
+    "environment": "production",
+    "rule_type": "everyone",
     "rule_value": null,
     "archived": false
   },
   {
-    "name": "something something",
+    "name": "ai_recommendations",
     "enabled": true,
-    "environment": "string",
-    "rule_type": "string",
-    "rule_value": 0,
+    "environment": "production",
+    "rule_type": "percentage",
+    "rule_value": 15,
     "archived": false
   }
 ]
