@@ -21,7 +21,7 @@
   },
   {
     "name": "ai_recommendations",
-    "enabled": true,
+    "enabled": false,
     "environment": "production",
     "rule_type": "percentage",
     "rule_value": 15,
